@@ -1,0 +1,17 @@
+services:
+  spark-jupyter:
+    user: root
+    image: quay.io/jupyter/pyspark-notebook:spark-3.5.3
+    container_name: pyspark-notebook
+    environment:
+        NB_GID: 100
+        NB_UID: 1001
+        NB_USER: alex
+        GRANT_SUDO: 1
+        CHOWN_HOME: 1
+        NOTEBOOK_ARGS: "--NotebookApp.token='' --NotebookApp.ip=0.0.0.0" # No password, localhost
+    ports:
+      - "4040:4040" # Spark UI
+      - "8888:8888" # jupyter
+    volumes:
+      - "./:/home/alex"
