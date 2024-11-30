@@ -38,23 +38,33 @@ class PySparkDQ:
 
   class DataTest:
       def __init__(self, colname, test, scope, partial, tolerance=1.0, over_under_tolerance='over', inclusive_exclusive='inclusive'):
-          assert tolerance >= 0.0 and tolerance <= 1.0, f"tolerance must be between 0.0 and 1.0 inclusive. Current value is {tolerance}"
-          assert over_under_tolerance in ['over','under'], f"over_under_tolerance not in ['over','under']. Current value is {over_under_tolerance}"
-          assert inclusive_exclusive in ['inclusive', 'exclusive'], f"inclusive_exclusive must be in ['inclusive', 'exclusive']. Current value is {inclusive_exclusive}"
-          self._colname = colname
-          self._test = test
-          self._scope = str(scope)
-          self._partial = partial
-          self._tolerance = float(tolerance)
-          self._over_under_tolerance = over_under_tolerance
-          self._inclusive_exclusive = inclusive_exclusive
+            assert tolerance >= 0.0 and tolerance <= 1.0, f"tolerance must be between 0.0 and 1.0 inclusive. Current value is {tolerance}"
+            assert over_under_tolerance in ['over','under'], f"over_under_tolerance not in ['over','under']. Current value is {over_under_tolerance}"
+            assert inclusive_exclusive in ['inclusive', 'exclusive'], f"inclusive_exclusive must be in ['inclusive', 'exclusive']. Current value is {inclusive_exclusive}"
+            self._colname = colname
+            self._test = test
+            self._scope = str(scope)
+            self._partial = partial
+            self._tolerance = float(tolerance)
+            self._over_under_tolerance = over_under_tolerance
+            self._inclusive_exclusive = inclusive_exclusive
 
       def get_pyspark_row_struct(self):
-          return f.struct(f.lit(self.colname).alias('colname'),
-                          f.lit(self.test).alias('test'),
-                          f.lit(self.scope).alias('scope'),
-                          self.partial.alias('pass'),
-                         )
+            return f.struct(f.lit(self.colname).alias('colname'),
+                            f.lit(self.test).alias('test'),
+                            f.lit(self.scope).alias('scope'),
+                            self.partial.alias('pass'),
+                            )
+      def __eq__(self, other: object) -> bool:
+            return (
+                self.colname == other.colname and
+                self.test == other.test and
+                self.scope == other.scope and
+                str(self.partial) == str(other.partial) and
+                self.tolerance == other.tolerance and
+                self.over_under_tolerance == other.over_under_tolerance and
+                self.inclusive_exclusive == other.inclusive_exclusive
+            )
       
       @property
       def colname(self):
@@ -80,12 +90,6 @@ class PySparkDQ:
       @property
       def inclusive_exclusive(self):
           return self._inclusive_exclusive
-      
-  def begin(self):
-    self._data_tests = []
-    self._df_test_results = self._spark_session.createDataFrame([], self._result_schema)
-    self._begin_flag=True
-    return self
       
   ## ---------------- Native dq evaluations --------------------- ##
 
@@ -126,8 +130,8 @@ class PySparkDQ:
     partial = f.col(colname).isin(val_list)
     
     data_test = self.DataTest(colname, test, scope, partial, tolerance, over_under_tolerance, inclusive_exclusive)
-    self._add_test_to_queue(data_test)
-    self._add_to_summary_report(data_test)
+    if self._add_test_to_queue(data_test):
+        self._add_to_summary_report(data_test)
     return self
 
   def values_not_in_list(self, colname:str, val_list:list, tolerance:float=1.0, over_under_tolerance='over', inclusive_exclusive='inclusive'):
@@ -167,8 +171,8 @@ class PySparkDQ:
     partial = ~f.col(colname).isin(val_list)
 
     data_test = self.DataTest(colname, test, scope, partial, tolerance, over_under_tolerance, inclusive_exclusive)
-    self._add_test_to_queue(data_test)
-    self._add_to_summary_report(data_test)
+    if self._add_test_to_queue(data_test):
+        self._add_to_summary_report(data_test)
     return self
   
   def values_null(self, colname:str, tolerance:float=1.0, over_under_tolerance='over', inclusive_exclusive='inclusive'):
@@ -205,8 +209,8 @@ class PySparkDQ:
     partial = f.col(colname).isNull()
 
     data_test = self.DataTest(colname, test, scope, partial, tolerance, over_under_tolerance, inclusive_exclusive)
-    self._add_test_to_queue(data_test)
-    self._add_to_summary_report(data_test)
+    if self._add_test_to_queue(data_test):
+        self._add_to_summary_report(data_test)
     return self
 
   def values_not_null(self, colname:str, tolerance:float=1.0, over_under_tolerance='over', inclusive_exclusive='inclusive'):
@@ -243,8 +247,8 @@ class PySparkDQ:
     partial = f.col(colname).isNotNull()
 
     data_test = self.DataTest(colname, test, scope, partial, tolerance, over_under_tolerance, inclusive_exclusive)
-    self._add_test_to_queue(data_test)
-    self._add_to_summary_report(data_test)
+    if self._add_test_to_queue(data_test):
+        self._add_to_summary_report(data_test)
     return self
 
   def values_equal(self, colname:str, value, tolerance:float=1.0, over_under_tolerance='over', inclusive_exclusive='inclusive'):
@@ -284,8 +288,8 @@ class PySparkDQ:
     partial = f.col(colname)==scope
 
     data_test = self.DataTest(colname, test, scope, partial, tolerance, over_under_tolerance, inclusive_exclusive)
-    self._add_test_to_queue(data_test)
-    self._add_to_summary_report(data_test)
+    if self._add_test_to_queue(data_test):
+        self._add_to_summary_report(data_test)
     return self
   
   def values_not_equal(self, colname:str, value, tolerance:float=1.0, over_under_tolerance='over', inclusive_exclusive='inclusive'):
@@ -325,8 +329,8 @@ class PySparkDQ:
     partial = f.col(colname)!=scope
 
     data_test = self.DataTest(colname, test, scope, partial, tolerance, over_under_tolerance, inclusive_exclusive)
-    self._add_test_to_queue(data_test)
-    self._add_to_summary_report(data_test)
+    if self._add_test_to_queue(data_test):
+        self._add_to_summary_report(data_test)
     return self
 
   def values_between(self, colname:str, lower_value, upper_value, tolerance:float=1.0, over_under_tolerance='over', inclusive_exclusive='inclusive'):
@@ -369,8 +373,8 @@ class PySparkDQ:
     partial = f.col(colname).between(lower_value,upper_value)
     
     data_test = self.DataTest(colname, test, scope, partial, tolerance, over_under_tolerance, inclusive_exclusive)
-    self._add_test_to_queue(data_test)
-    self._add_to_summary_report(data_test)
+    if self._add_test_to_queue(data_test):
+        self._add_to_summary_report(data_test)
     return self
 
   def values_greater_equal_than(self, colname:str, value, tolerance:float=1.0, over_under_tolerance='over', inclusive_exclusive='inclusive'):
@@ -411,8 +415,8 @@ class PySparkDQ:
     reverse_partial = f.col(colname) < value
 
     data_test = self.DataTest(colname, test, scope, partial, tolerance, over_under_tolerance, inclusive_exclusive)
-    self._add_test_to_queue(data_test)
-    self._add_to_summary_report(data_test)
+    if self._add_test_to_queue(data_test):
+        self._add_to_summary_report(data_test)
     return self
 
   def values_lower_equal_than(self, colname:str, value, tolerance:float=1.0, over_under_tolerance='over', inclusive_exclusive='inclusive'):
@@ -452,8 +456,8 @@ class PySparkDQ:
     partial = f.col(colname) <= value
 
     data_test = self.DataTest(colname, test, scope, partial, tolerance, over_under_tolerance, inclusive_exclusive)
-    self._add_test_to_queue(data_test)
-    self._add_to_summary_report(data_test)
+    if self._add_test_to_queue(data_test):
+        self._add_to_summary_report(data_test)
     return self
 
   def values_greater_than(self, colname:str, value, tolerance:float=1.0, over_under_tolerance='over', inclusive_exclusive='inclusive'):
@@ -493,8 +497,8 @@ class PySparkDQ:
     partial = f.col(colname) > value
 
     data_test = self.DataTest(colname, test, scope, partial, tolerance, over_under_tolerance, inclusive_exclusive)
-    self._add_test_to_queue(data_test)
-    self._add_to_summary_report(data_test)
+    if self._add_test_to_queue(data_test):
+        self._add_to_summary_report(data_test)
     return self
 
   def values_lower_than(self, colname:str, value, tolerance:float=1.0, over_under_tolerance='over', inclusive_exclusive='inclusive'):
@@ -534,8 +538,8 @@ class PySparkDQ:
     partial = f.col(colname) > value
 
     data_test = self.DataTest(colname, test, scope, partial, tolerance, over_under_tolerance, inclusive_exclusive)
-    self._add_test_to_queue(data_test)
-    self._add_to_summary_report(data_test)
+    if self._add_test_to_queue(data_test):
+        self._add_to_summary_report(data_test)
     return self
   
   def values_custom_dq(self, test, partial, scope=None, tolerance:float=1.0, over_under_tolerance='over', inclusive_exclusive='inclusive'):
@@ -575,8 +579,8 @@ class PySparkDQ:
     scope = scope if scope is not None else str(partial)
     colname = "N/A"
     data_test = self.DataTest(colname, test, scope, partial, tolerance, over_under_tolerance, inclusive_exclusive)
-    self._add_test_to_queue(data_test)
-    self._add_to_summary_report(data_test)
+    if self._add_test_to_queue(data_test):
+        self._add_to_summary_report(data_test)
     return self
 
   ## ----------------------- User Main Functions ----------------------- ##
@@ -721,16 +725,15 @@ class PySparkDQ:
     if self._df_count > self._warning_rows:
       self._log_message(message=f"Large number of rows detected ({self._df_count}), be aware that large datasets will take longer to compute. Consider sampling the dataframe before initializing this class", level='WARNING')
 
-  def _add_test_to_queue(self, data_test):
-    self._check_begin_flag()
-    over_under_str = 'at least' if data_test.over_under_tolerance == 'over' else 'up until'
-    self._log_message(message=f"Checking {data_test.test} for {data_test.colname} - {over_under_str} {round(100*data_test.tolerance,4)}% of total rows", level='INFO')
-    self._data_tests.append(data_test)
-                           
-  def _check_begin_flag(self):
-      if self._begin_flag==False:
-          raise Exception("Please add .begin() before your data quality checks! dq = PySparkDQ(dq) dq.begin().your_checks()")
-          
+  def _add_test_to_queue(self, data_test) -> bool:
+    if data_test not in self._data_tests:
+        over_under_str = 'at least' if data_test.over_under_tolerance == 'over' else 'up until'
+        self._log_message(message=f"Checking {data_test.test} for {data_test.colname} - {over_under_str} {round(100*data_test.tolerance,4)}% of total rows", level='INFO')
+        self._data_tests.append(data_test)
+        return True
+    else:
+       return False
+                                  
   def _add_to_summary_report(self, data_test:DataTest):
     # Setting summary report row for this test
     self._df_test_results = self._df_test_results.unionByName(

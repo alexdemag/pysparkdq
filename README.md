@@ -21,7 +21,7 @@ This package is distributed on pypi. To install it just run:
 
 
 ```
-pip install pysparkdq
+pip install psdq
 ```
 
 ## Quickstart
@@ -30,7 +30,7 @@ Instantiate the class with the desired spark DataFrame and SparkSession and you'
 ```python
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as f
-from pysparkdq import PySparkDQ
+from psdq.pysparkdq import PySparkDQ
 
 spark = SparkSession \
     .builder\
