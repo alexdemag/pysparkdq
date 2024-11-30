@@ -538,7 +538,7 @@ class PySparkDQ:
     self._add_to_summary_report(data_test)
     return self
   
-  def values_custom_dq(self, test, partial, scope="N/A", colname="N/A", tolerance:float=1.0, over_under_tolerance='over', inclusive_exclusive='inclusive'):
+  def values_custom_dq(self, test, partial, scope=None, tolerance:float=1.0, over_under_tolerance='over', inclusive_exclusive='inclusive'):
     """
     Adds a custom data quality check. The only requiremets for the partial argument expressions is that it's written in terms of
     pyspark columns or spark sql expressions and resolves into a boolean column
@@ -549,6 +549,8 @@ class PySparkDQ:
         Test name to use. 
     partial: column
         Column expression that defines the test.
+    scope (optional): string
+        If you want to manually add your scope to identify this test feel free to do so. Defaults to the partial used on the test.
     tolerance (optional): float
         Tolerance threshold for test evaluation. ranges from 0.0 to 1.0. Defaults to 1.0.
     over_under_tolerance (optional): string
@@ -570,6 +572,8 @@ class PySparkDQ:
     -------
     None
     """
+    scope = scope if scope is not None else str(partial)
+    colname = "N/A"
     data_test = self.DataTest(colname, test, scope, partial, tolerance, over_under_tolerance, inclusive_exclusive)
     self._add_test_to_queue(data_test)
     self._add_to_summary_report(data_test)
@@ -638,7 +642,7 @@ class PySparkDQ:
                 .withColumn('pysparkdq_failed_tests', f.transform(
                     f.filter('pysparkdq', lambda x: x.getField('pass')==False), 
                     lambda y: y.dropFields('pass')
-                ))
+                )).drop('pysparkdq')
     return self._df_row_level_qa
       
   def evaluate(self) -> None:
