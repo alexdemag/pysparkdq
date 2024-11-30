@@ -6,9 +6,7 @@
 ![Language Count](https://img.shields.io/github/languages/count/alexdemag/pysparkdq)
 ![Python](https://img.shields.io/badge/python-3.9-red.svg)
 
-This library aims to be as straightforward as possible, not requiring for you to setup anything externally to use it. Just instantiate the class and put some tests on your target dataframe.
-
-It's also a goal for this library to work on most of Databricks Runtime LTS versions. 
+This library aims to be an easy to use drop-in tool to perform data quality analysis on scale with PySpark. It does not require you to setup contexts nor make use of configuration files. Just instantiate the class and put some tests on your target dataframe.
 
 ## Prerequisites
 
@@ -26,43 +24,88 @@ This package is distributed on pypi. To install it just run:
 pip install pysparkdq
 ```
 
-## Using <project_name>
+## Quickstart
 
-To use <project_name>, follow these steps:
+Instantiate the class with the desired spark DataFrame and SparkSession and you're good to go.
+```python
+from pyspark.sql import SparkSession
+import pyspark.sql.functions as f
+from pysparkdq import PySparkDQ
+
+spark = SparkSession \
+    .builder\
+    .appName("PySparkDQ")
+    .getOrCreate()
+
+df_test = spark.createDataFrame([
+                    {"name": "Alex", "birthday": '1990-03-31'},
+                    {"name": "Alice", "birthday": '1990-12-09'},
+                    {"name": "Bob", "birthday": '1985-06-12'},
+                    {"name": "Cecilia", "birthday": '1990-12-09'},
+                    {"name": "Eve", "birthday": '1964-07-22'}]) \
+                    .withColumn('birthday', f.col('birthday').cast('date'))
+
+
+dq = PySparkDQ(spark_session=spark, df=df_test,log_level='INFO')
+
+tests = dq.begin()\
+    .values_not_null(colname="name")\
+    .values_between(colname='birthday', lower_value='1990-01-01', upper_value='1993-01-01', 
+                tolerance=0.5, # You can control tolerances with the optional parameters
+                over_under_tolerance='over', 
+                inclusive_exclusive='inclusive')\
+    .values_custom_dq(test="my custom test", 
+        partial=( (f.col('name') == 'Bob') & (f.col('birthday') == '1985-06-12') ))
+        # And also write your own tests if you'd like! Custom tests accept a column expression that returns a boolean column.
 
 ```
-<usage_example>
+Now that you have your tests, you can do one of the following:
+
+* Get a summary for the test run
+
+```python
+test_results = tests.get_summary() # returns a dataframe
+
+test_results.show()
 ```
 
-Add run commands and examples you think users will find useful. Provide an options reference for bonus points!
+| colname   | test            | scope                   |   found |   total |   percentage |   tolerance | over_under_tolerance   | inclusive_exclusive   | pass   |
+|:----------|:----------------|:------------------------|--------:|--------:|-------------:|------------:|:-----------------------|:----------------------|:-------|
+| name      | values_not_null | null                    |       5 |       5 |          1   |         1   | over                   | inclusive             | True   |
+| birthday  | values_between  | 1990-01-01 - 1993-01-01 |       3 |       5 |          0.6 |         0.5 | over                   | inclusive             | True   |
+| N/A       | my custom test  | N/A                     |       1 |       5 |          0.2 |         1   | over                   | inclusive             | False  |
 
-## Contributing to <project_name>
-<!--- If your README is long or you have some specific process or steps you want contributors to follow, consider creating a separate CONTRIBUTING.md file--->
-To contribute to <project_name>, follow these steps:
 
-1. Fork this repository.
-2. Create a branch: `git checkout -b <branch_name>`.
-3. Make your changes and commit them: `git commit -m '<commit_message>'`
-4. Push to the original branch: `git push origin <project_name>/<location>`
-5. Create the pull request.
+* Thrown an exception whenever it has a failed test. in this case it will throw the following error.
 
-Alternatively see the GitHub documentation on [creating a pull request](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request).
+```python
+tests.evaluate()
 
-## Contributors
+AssertionError: Detected failed tests. Count: 1, Tests: [{'colname': 'N/A', 'test': 'my custom test', 'scope': 'N/A'}]
+```
 
-Thanks to the following people who have contributed to this project:
+* Get a row-based evaluation of your rules. That returns the dataframe with extra folumns indicating how many tests failed and which ones failed per row
 
-* [@scottydocs](https://github.com/scottydocs) 📖
-* [@cainwatson](https://github.com/cainwatson) 🐛
-* [@calchuchesta](https://github.com/calchuchesta) 🐛
+```python
+row_level_qa = tests.get_row_level_qa() # Returns a dataframe
 
-You might want to consider using something like the [All Contributors](https://github.com/all-contributors/all-contributors) specification and its [emoji key](https://allcontributors.org/docs/en/emoji-key).
+# Returns two extra columns
+# One counts failed tests per row
+# Second one is a list<struct> that returns which tests have failed
 
-## Contact
+# ATTENTION! Be careful when comparing this view with the summary. Tests can fail at row level and pass at summary level due to defined tolerances!
+row_level_qa.show()
 
-If you want to contact me you can reach me at <your_email@address.com>.
+```
 
-## License
-<!--- If you're not sure which open license to use see https://choosealicense.com/--->
+| birthday   | name    |   pysparkdq_fail_count | pysparkdq_failed_tests                                                                                                                                                                     |
+|:-----------|:--------|-----------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1990-03-31 | Alex    |                      1 | [Row(colname='N/A', test='my custom test', scope="Column<'((name = Bob) AND (birthday = 1985-06-12))'>")]                                                                                  |
+| 1990-12-09 | Alice   |                      1 | [Row(colname='N/A', test='my custom test', scope="Column<'((name = Bob) AND (birthday = 1985-06-12))'>")]                                                                                  |
+| 1985-06-12 | Bob     |                      0 | []                                                                                                                                                                                         |
+| 1990-12-09 | Cecilia |                      1 | [Row(colname='N/A', test='my custom test', scope="Column<'((name = Bob) AND (birthday = 1985-06-12))'>")]                                                                                  |
+| 1964-07-22 | Eve     |                      2 | [Row(colname='birthday', test='values_between', scope='1980-01-01 - 1993-01-01'), Row(colname='N/A', test='my custom test', scope="Column<'((name = Bob) AND (birthday = 1985-06-12))'>")] |
 
-This project uses the following license: [<license_name>](<link>).
+
+## Contributing
+If there's any issues or improvements to be requested fell free to open an issue on the board.
