@@ -61,7 +61,8 @@ tests = dq\
 ```
 Now that you have your tests, you can do one of the following:
 
-* Get a summary for the test run
+### Get a summary for the test run
+
 
 ```python
 test_results = tests.get_summary() # returns a dataframe
@@ -75,16 +76,16 @@ test_results.show()
 | birthday  | values_between  | 1990-01-01 - 1993-01-01 |       3 |       5 |          0.6 |         0.5 | over                   | inclusive             | True   |
 | N/A       | my custom test  | N/A                     |       1 |       5 |          0.2 |         1   | over                   | inclusive             | False  |
 
-
-* Thrown an exception whenever it has a failed test. in this case it will throw the following error.
+---
+### Thrown an exception whenever it has a failed test. in this case it will throw the following error.
 
 ```python
 tests.evaluate()
 
 AssertionError: Detected failed tests. Count: 1, Tests: [{'colname': 'N/A', 'test': 'my custom test', 'scope': 'N/A'}]
 ```
-
-* Get a row-based evaluation of your rules. That returns the dataframe with extra folumns indicating how many tests failed and which ones failed per row
+--- 
+### Get a row-based evaluation of your rules. That returns the dataframe with extra folumns indicating how many tests failed and which ones failed per row
 
 ```python
 row_level_qa = tests.get_row_level_qa() # Returns a dataframe
@@ -106,6 +107,37 @@ row_level_qa.show()
 | 1990-12-09 | Cecilia |                      1 | [Row(colname='N/A', test='my custom test', scope="Column<'((name = Bob) AND (birthday = 1985-06-12))'>")]                                                                                  |
 | 1964-07-22 | Eve     |                      2 | [Row(colname='birthday', test='values_between', scope='1980-01-01 - 1993-01-01'), Row(colname='N/A', test='my custom test', scope="Column<'((name = Bob) AND (birthday = 1985-06-12))'>")] |
 
+
+
+## Available Functions
+
+### Tests
+
+Reference values for tests can be whatever is accepted when working with spark columns. For example, a test can compare a given column against an arbitrary value or even another column or column-expression result. Accepted values/types respect the same rules as default pyspark.
+
+| Test                      | Description                                                                                                                   |
+|---------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| values_in_list            | Test column for values in list, same as c.isIn(val_list)                                                                      |
+| values_not_in_list        | Test column for values not in list, same as ~c.isIn(val_list)                                                                 |
+| values_null               | Test column for Null values, same as c.isNull()                                                                               |
+| values_not_null           | Test column for Not Null values, same as c.isNotNull()                                                                        |
+| values_equal              | Test column for values equal to value, same as c == value                                                                     |
+| values_not_equal          | Test column for values equal to value, same as c == value                                                                     |
+| values_between            | Test column for values between boundaries, same as c.between(lower, upper)                                                    |
+| values_greater_equal_than | Test column for values greater equal than the reference value, same as c >= value                                             |
+| values_lower_equal_than   | Test column for values lower equal than the reference value, same as c <= value                                               |
+| values_greater_than       | Test column for values greater than the reference value, same as c <= value                                                   |
+| values_lower_than         | Test column for values lower than the reference value, same as c <= value                                                     |
+| values_custom_dq          | Adds a custom data quality check.                                                                                             |
+
+### Commands
+
+| Name             | Description                                                                                          |
+|------------------|------------------------------------------------------------------------------------------------------|
+| get_summary      | Evaluates all tests and returns a SparkDataFrame with the test summaries                             |
+| get_row_level_qa | Evaluates all tests row-by-row and returns the initial dataframe with extra columns for test results |
+| evaluate         | Evaluates the test summary and throws an exception if anything fails.                                |
+| set_log_level    | Set log level after class is instantiated. Levels are ['INFO','WARNING','ERROR','DEBUG','CRITICAL']  |
 
 ## Contributing
 If there's any issues or improvements to be requested fell free to open an issue on the board.
