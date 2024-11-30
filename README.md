@@ -48,7 +48,7 @@ df_test = spark.createDataFrame([
 
 dq = PySparkDQ(spark_session=spark, df=df_test,log_level='INFO')
 
-tests = dq.begin()\
+tests = dq\
     .values_not_null(colname="name")\
     .values_between(colname='birthday', lower_value='1990-01-01', upper_value='1993-01-01', 
                 tolerance=0.5, # You can control tolerances with the optional parameters
