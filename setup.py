@@ -7,7 +7,7 @@ setup(
     description='Ad Hoc Data Quality Tool for PySpark',
     author='Alexandre "Alex" de Magalhaes',
     author_email="alexandredemagalhaess@gmail.com",
-    install_requires=['pyspark>=3.5.3'],
+    install_requires=[],
     setup_requires=['pytest-runner'],
     tests_require=['pytest>=4.4.1'],
     test_suite='tests',
