@@ -48,6 +48,8 @@ df_test = spark.createDataFrame([
 
 dq = PySparkDQ(spark_session=spark, df=df_test,log_level='INFO')
 
+my_custom_test_col_expression = ((f.col('name') == 'Bob') & (f.col('birthday') == '1985-06-12'))
+
 tests = dq\
     .values_not_null(colname="name")\
     .values_between(colname='birthday', lower_value='1990-01-01', upper_value='1993-01-01', 
@@ -55,13 +57,13 @@ tests = dq\
                 over_under_tolerance='over', 
                 inclusive_exclusive='inclusive')\
     .values_custom_dq(test="my custom test", 
-        partial=( (f.col('name') == 'Bob') & (f.col('birthday') == '1985-06-12') ))
+        partial=my_custom_test_col_expression)
         # And also write your own tests if you'd like! Custom tests accept a column expression that returns a boolean column.
 
 ```
 Now that you have your tests, you can do one of the following:
 
-### Get a summary for the test run
+* ### Get a summary for the test run
 
 
 ```python
@@ -76,8 +78,7 @@ test_results.show()
 | birthday  | values_between  | 1990-01-01 - 1993-01-01 |       3 |       5 |          0.6 |         0.5 | over                   | inclusive             | True   |
 | N/A       | my custom test  | N/A                     |       1 |       5 |          0.2 |         1   | over                   | inclusive             | False  |
 
----
-### Thrown an exception whenever it has a failed test. in this case it will throw the following error.
+* ### Thrown an exception whenever it has a failed test. in this case it will throw the following error.
 
 ```python
 tests.evaluate()
@@ -85,7 +86,7 @@ tests.evaluate()
 AssertionError: Detected failed tests. Count: 1, Tests: [{'colname': 'N/A', 'test': 'my custom test', 'scope': 'N/A'}]
 ```
 --- 
-### Get a row-based evaluation of your rules. That returns the dataframe with extra folumns indicating how many tests failed and which ones failed per row
+* ### Get a row-based evaluation of your rules. That returns the dataframe with extra folumns indicating how many tests failed and which ones failed per row
 
 ```python
 row_level_qa = tests.get_row_level_qa() # Returns a dataframe
@@ -128,7 +129,7 @@ Reference values for tests can be whatever is accepted when working with spark c
 | values_lower_equal_than   | Test column for values lower equal than the reference value, same as c <= value                                               |
 | values_greater_than       | Test column for values greater than the reference value, same as c <= value                                                   |
 | values_lower_than         | Test column for values lower than the reference value, same as c <= value                                                     |
-| values_custom_dq          | Adds a custom data quality check.                                                                                             |
+| values_custom_dq          | Adds a custom data quality check. Needs a column expression that returns bool.                                                                                          |
 
 ### Commands
 
