@@ -26,7 +26,13 @@ jobs:
       with:
         distribution: 'zulu'
         java-version: '11'
-    
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pyspark==3.5.1 pandas==2.0.3 pyarrow==17.0.0 numpy==1.26.4
+        pip install -e .
+ 
     - name: Download and setup Spark 3.5.1
       run: |
         wget https://archive.apache.org/dist/spark/spark-3.5.1/spark-3.5.1-bin-hadoop3.tgz
@@ -34,12 +40,6 @@ jobs:
         sudo mv spark-3.5.1-bin-hadoop3 /opt/spark
         echo "SPARK_HOME=/opt/spark" >> $GITHUB_ENV
         echo "/opt/spark/bin" >> $GITHUB_PATH
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pytest pyspark==3.5.1 pandas==2.0.3 pyarrow==17.0.0 numpy==1.21.0
-        pip install -e .
     
     - name: Run pytest
       run: |
